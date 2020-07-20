@@ -16,7 +16,13 @@ end
 function M.partial(f, ...)
   local args = table.pack(...)
   return function(...)
-    return f(table.unpack(args, 1, args.n), ...)
+    local all = {table.unpack(args, 1, args.n)}
+    local count = select('#', ...)
+    for i = 1, count do
+      table.insert(all, (select(i, ...)))
+    end
+    all.n = args.n + count
+    return f(table.unpack(all, 1, all.n))
   end
 end
 
@@ -87,7 +93,7 @@ function M.reduce(f, cumul, it, inv, ctl)
     local res = table.pack(it(inv, ctl))
     ctl = res[1]
     if ctl == nil then return cumul end
-    f(cumul, table.unpack(res, 1, res.n))
+    cumul = f(cumul, table.unpack(res, 1, res.n))
   end
 end
 
@@ -99,7 +105,7 @@ function M.taken(n, it, inv, ctl)
   if it == nil then return M.partial(M.taken, n) end
 
   return function()
-    if n == 0 then return nil end
+    if n <= 0 then return nil end
 
     n = n - 1
     local res = table.pack(it(inv, ctl))
@@ -177,6 +183,18 @@ function M.skipwhile(p, it, inv, ctl)
     if ctl == nil then return nil end
     return table.unpack(res, 1, res.n)
   end
+end
+
+function M.any(p, it, inv, ctl)
+
+end
+
+function M.all(p, it, inv, ctl)
+
+end
+
+function M.combine(...)
+
 end
 
 return M
