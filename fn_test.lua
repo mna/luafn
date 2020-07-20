@@ -1,6 +1,8 @@
 local lu = require 'luaunit'
 
 TestFromTo = require 'tests.fromto'
+TestPartial = require 'tests.partial'
+TestPipe = require 'tests.pipe'
 TestFilter = require 'tests.filter'
 TestMap = require 'tests.map'
 TestReduce = require 'tests.reduce'
