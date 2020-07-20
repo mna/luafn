@@ -8,8 +8,8 @@ function M.forstats(t, ...)
     count = count + 1
     sum = sum + i
   end
-  lu.assertEquals(count, t.count)
-  lu.assertEquals(sum, t.sum)
+  if t.count then lu.assertEquals(count, t.count) end
+  if t.sum then lu.assertEquals(sum, t.sum) end
 end
 
 return M

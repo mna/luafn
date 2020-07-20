@@ -1,4 +1,5 @@
 local lu = require 'luaunit'
+local testing = require 'tests.testing'
 local fn = require 'fn'
 
 local M = {}
@@ -90,6 +91,16 @@ function M.test_create_set_from_array()
     return cumul
   end, {}, ipairs(src))
   lu.assertEquals(got, {a = true, b = true, c = true, d = true})
+end
+
+function M.test_coroutine_iterator()
+  local co = coroutine.wrap(function()
+    while true do
+      coroutine.yield(math.random())
+    end
+  end)
+
+  testing.forstats({count = 3}, fn.taken(3, co))
 end
 
 return M
