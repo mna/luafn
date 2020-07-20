@@ -91,4 +91,92 @@ function M.reduce(f, cumul, it, inv, ctl)
   end
 end
 
+-- Take the first n results of iterator it.
+-- Return a new iterator that takes at most those first n results.
+-- If it is nil, returns a partially-applied function with the n
+-- value set.
+function M.taken(n, it, inv, ctl)
+  if it == nil then return M.partial(M.taken, n) end
+
+  return function()
+    if n == 0 then return nil end
+
+    n = n - 1
+    local res = table.pack(it(inv, ctl))
+    ctl = res[1]
+    if ctl == nil then return nil end
+    return table.unpack(res, 1, res.n)
+  end
+end
+
+-- Take the iterator's it results while the predicate p returns true.
+-- The predicate is called with the values of each iteration.
+-- Return a new iterator that applies the take while condition.
+-- If it is nil, returns a partially-applied function with the predicate
+-- p set.
+function M.takewhile(p, it, inv, ctl)
+  if it == nil then return M.partial(M.takewhile, p) end
+
+  local stop = false
+  return function()
+    if stop then return nil end
+
+    local res = table.pack(it(inv, ctl))
+    ctl = res[1]
+    if ctl == nil then return nil end
+
+    if p(table.unpack(res, 1, res.n)) then
+      return table.unpack(res, 1, res.n)
+    end
+    stop = true
+  end
+end
+
+-- Skip the first n results of iterator it.
+-- Return a new iterator that skips those first n results.
+-- If it is nil, returns a partially-applied function with the n
+-- value set.
+function M.skipn(n, it, inv, ctl)
+  if it == nil then return M.partial(M.skipn, n) end
+
+  return function()
+    while n > 0 do
+      ctl = it(inv, ctl)
+      n = n - 1
+      if ctl == nil then return nil end
+    end
+    local res = table.pack(it(inv, ctl))
+    ctl = res[1]
+    if ctl == nil then return nil end
+    return table.unpack(res, 1, res.n)
+  end
+end
+
+-- Skip the iterator's it results while the predicate p returns true.
+-- The predicate is called with the values of each iteration.
+-- Return a new iterator that applies the skip while condition.
+-- If it is nil, returns a partially-applied function with the predicate
+-- p set.
+function M.skipwhile(p, it, inv, ctl)
+  if it == nil then return M.partial(M.skipwhile, p) end
+
+  local skipping = true
+  return function()
+    while skipping do
+      local res = table.pack(it(inv, ctl))
+      ctl = res[1]
+      if ctl == nil then return nil end
+      if not p(table.unpack(res, 1, res.n)) then
+        skipping = false
+        return table.unpack(res, 1, res.n)
+      end
+    end
+
+    local res = table.pack(it(inv, ctl))
+    ctl = res[1]
+    if ctl == nil then return nil end
+    return table.unpack(res, 1, res.n)
+  end
+end
+
 return M
