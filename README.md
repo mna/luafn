@@ -3,6 +3,7 @@
 A pure Lua module with no external dependency that provides functional programming fundamentals such as map, filter, reduce and pipe. All core functions work with iterators and as such are lazily evaluated.
 
 * Canonical repository: https://git.sr.ht/~mna/luafn
+* Issue tracker: https://todo.sr.ht/~mna/luafn
 
 ## Install
 
