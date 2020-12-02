@@ -30,6 +30,13 @@ Partial binds the provided arguments to function f and returns a new
 function that, when called, executes with the combination of the
 partially-applied arguments and newly provided arguments.
 
+### `fn.partialtrail(f, exactly, ...)`
+
+Same as partial, except that the partially-applied arguments are added
+at the end of the newly provided arguments. If exactly is not nil, then
+that exact number of newly provided arguments are passed before adding
+the partially-applied ones, adding nil values in-between as required.
+
 ### `fn.pipe(...)`
 
 Pipe returned values to the input arguments of the next function,

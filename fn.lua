@@ -26,6 +26,26 @@ function M.partial(f, ...)
   end
 end
 
+-- Same as partial, except that the partially-applied arguments are added
+-- at the end of the newly provided arguments. If exactly is not nil, then
+-- that exact number of newly provided arguments are passed before adding
+-- the partially-applied ones, adding nil values in-between as required.
+function M.partialtrail(f, exactly, ...)
+  local args = table.pack(...)
+  return function(...)
+    local count = select('#', ...)
+    if exactly and exactly >= 0 then
+      count = exactly
+    end
+    local all = {...}
+    all.n = count + args.n
+    for i = 1, args.n do
+      all[count + i] = args[i]
+    end
+    return f(table.unpack(all, 1, all.n))
+  end
+end
+
 -- Pipe returned values to the input arguments of the next function,
 -- in left-to-right composition.
 -- Return a function that applies the pipe.
