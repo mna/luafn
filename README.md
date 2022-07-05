@@ -47,7 +47,7 @@ Return a function that applies the pipe.
 
 Filter iterator it by keeping only items that satisfy predicate p.
 Return a new iterator that applies the filter.
-If it is nil, returns a partially-applied function with the predicate
+If "it" is nil, returns a partially-applied function with the predicate
 set.
 
 ### `fn.map(f, it, inv, ctl)`
@@ -56,7 +56,7 @@ Map iterator it by calling f on each iteration and returning its
 returned values instead of the original ones. Note that returning
 nil from f as first value end the iterator.
 Return a new iterator that applies the map.
-If it is nil, returns a partially-applied function with the map
+If "it" is nil, returns a partially-applied function with the map
 function set.
 
 ### `fn.reduce(f, cumul, it, inv, ctl)`
@@ -64,14 +64,14 @@ function set.
 Reduce iterator it by calling fn on each iteration with the
 accumulator cumul and all values returned for this iteration.
 Return the final value of the accumulator.
-If it is nil, returns a partially-applied function with the
+If "it" is nil, returns a partially-applied function with the
 reduce function and, if provided, the accumulator value.
 
 ### `fn.taken(n, it, inv, ctl)`
 
 Take the first n results of iterator it.
 Return a new iterator that takes at most those first n results.
-If it is nil, returns a partially-applied function with the n
+If "it" is nil, returns a partially-applied function with the n
 value set.
 
 ### `fn.takewhile(p, it, inv, ctl)`
@@ -79,14 +79,14 @@ value set.
 Take the iterator's it results while the predicate p returns true.
 The predicate is called with the values of each iteration.
 Return a new iterator that applies the take while condition.
-If it is nil, returns a partially-applied function with the predicate
+If "it" is nil, returns a partially-applied function with the predicate
 p set.
 
 ### `fn.skipn(n, it, inv, ctl)`
 
 Skip the first n results of iterator it.
 Return a new iterator that skips those first n results.
-If it is nil, returns a partially-applied function with the n
+If "it" is nil, returns a partially-applied function with the n
 value set.
 
 ### `fn.skipwhile(p, it, inv, ctl)`
@@ -94,7 +94,7 @@ value set.
 Skip the iterator's it results while the predicate p returns true.
 The predicate is called with the values of each iteration.
 Return a new iterator that applies the skip while condition.
-If it is nil, returns a partially-applied function with the predicate
+If "it" is nil, returns a partially-applied function with the predicate
 p set.
 
 ### `fn.any(p, it, inv, ctl)`
@@ -104,7 +104,7 @@ returns true as soon as p returns true, along with the index of the
 iteration that returned true and all its values.
 It returns false as the only value if the iteration is completed
 without p returning true.
-If it is nil, returns a partially-applied function with the predicate
+If "it" is nil, returns a partially-applied function with the predicate
 p set.
 
 ### `fn.all(p, it, inv, ctl)`
@@ -114,7 +114,7 @@ returns false as soon as p returns false, along with the index of the
 iteration that returned false and all its values.
 It returns true as the only value if the iteration is completed without
 p returning false.
-If it is nil, returns a partially-applied function with the predicate
+If "it" is nil, returns a partially-applied function with the predicate
 p set.
 
 ### `fn.concat(...)`
@@ -129,6 +129,66 @@ A common way to generate this is e.g.:
 Another option is with table.pack (the 'n' field is used if
 it is set):
   `fn.concat(table.pack(pairs(t1)), table.pack(pairs(t2)))`
+
+### `fn.zip(...)`
+
+Zip returns an iterator that returns the first value of all iterators at
+each iteration step. All iterators are iterated together at the same time,
+and iteration ends when the first iterator ends. If other iterators end
+earlier, the nil value is returned for this iterator.
+
+The arguments must be provided as a list of tables, each table an array
+containing the iterator tuple (see documentation for concat for more
+details).
+
+### `fn.unzip(it, inv, ctl)`
+
+Unzip takes a single iterator and returns a new iterator that produces a
+single value on each iteration. The original iterator advances only when
+all its returned values for a given step have been returned as single-value
+iteration steps. Note that any nil value in the values returned by the
+original iterator will stop the new iterator early, as nil are possible
+only when not the first return value in a Lua iterator (otherwise they
+indicate the end of iteration).
+
+### `fn.select(n, it, inv, ctl)`
+
+Select takes a single iterator and returns a new iterator that produces
+the value(s) of the original iterator specified by n, which can be:
+    * A number, indicating the 1-based index of the value to select
+    * An array, indicating the 1-based indices of the values to select,
+      returned in the array's order.
+    * A function that will receive the original iterator's values and
+      return its returned values instead (same as map).
+
+It is a specialized form of map. If "it" is nil, returns a partially-applied
+function with "n" set.
+
+### `fn.collectarray(t, it, inv, ctl)`
+
+Collects the first value of the iterator into an array, appending to t on
+each iteration. If t is nil, a new table is created. If "it" is nil, returns
+a partially-applied function with "t" set. This function consumes the
+iterator and returns t, it is a special case of reduce.
+
+To collect multiple values from the iterator in an array, pipe from pack,
+select or map.
+
+### `fn.collectkv(t, it, inv, ctl)`
+
+Collects the first two values of the iterator in a table, the first value
+being used as the key and the second as the value. If t is nil, a new table
+is created. If "it" is nil, returns a partially-applied function with "t"
+set. This function consumes the iterator and returns t, it is a special case
+of reduce.
+
+To rearrange order of the iterator's values, see select.
+
+### `fn.pack(it, inv, ctl)`
+
+Packs takes an iterator and returns a new iterator that packs all values
+from the original iterator into an array and returns that array as iteration
+value instead. It is a specialized form of map.
 
 ### `fn.callmethod(m, args, t, ...)`
 
