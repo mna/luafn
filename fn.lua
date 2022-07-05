@@ -1,5 +1,12 @@
 local M = {}
 
+-- Runs a single step of the iterator, returning all the values it produced as
+-- an array with field "n" set. The control variable should be modified
+-- accordingly by the caller.
+local function step_iterator(it, inv, ctl)
+	return table.pack(it(inv, ctl))
+end
+
 -- Return an iterator that generates all integers starting at from
 -- and ending at to, inclusive.
 function M.fromto(from, to)
@@ -60,16 +67,16 @@ function M.pipe(...)
   end
 end
 
--- Filter iterator it by keeping only items that satisfy predicate p.
+-- Filter iterator "it" by keeping only items that satisfy predicate p.
 -- Return a new iterator that applies the filter.
--- If it is nil, returns a partially-applied function with the predicate
+-- If "it" is nil, returns a partially-applied function with the predicate
 -- set.
 function M.filter(p, it, inv, ctl)
   if it == nil then return M.partial(M.filter, p) end
 
   return function()
     while true do
-      local res = table.pack(it(inv, ctl))
+      local res = step_iterator(it, inv, ctl)
       ctl = res[1]
       if ctl == nil then return nil end
 
@@ -84,13 +91,13 @@ end
 -- returned values instead of the original ones. Note that returning
 -- nil from f as first value end the iterator.
 -- Return a new iterator that applies the map.
--- If it is nil, returns a partially-applied function with the map
+-- If "it" is nil, returns a partially-applied function with the map
 -- function set.
 function M.map(f, it, inv, ctl)
   if it == nil then return M.partial(M.map, f) end
 
   return function()
-    local res = table.pack(it(inv, ctl))
+    local res = step_iterator(it, inv, ctl)
     ctl = res[1]
     if ctl == nil then return nil end
 
@@ -101,7 +108,7 @@ end
 -- Reduce iterator it by calling fn on each iteration with the
 -- accumulator cumul and all values returned for this iteration.
 -- Return the final value of the accumulator.
--- If it is nil, returns a partially-applied function with the
+-- If "it" is nil, returns a partially-applied function with the
 -- reduce function and, if provided, the accumulator value.
 function M.reduce(f, cumul, it, inv, ctl)
   if it == nil then
@@ -110,7 +117,7 @@ function M.reduce(f, cumul, it, inv, ctl)
   end
 
   while true do
-    local res = table.pack(it(inv, ctl))
+    local res = step_iterator(it, inv, ctl)
     ctl = res[1]
     if ctl == nil then return cumul end
     cumul = f(cumul, table.unpack(res, 1, res.n))
@@ -119,7 +126,7 @@ end
 
 -- Take the first n results of iterator it.
 -- Return a new iterator that takes at most those first n results.
--- If it is nil, returns a partially-applied function with the n
+-- If "it" is nil, returns a partially-applied function with the n
 -- value set.
 function M.taken(n, it, inv, ctl)
   if it == nil then return M.partial(M.taken, n) end
@@ -128,7 +135,7 @@ function M.taken(n, it, inv, ctl)
     if n <= 0 then return nil end
 
     n = n - 1
-    local res = table.pack(it(inv, ctl))
+    local res = step_iterator(it, inv, ctl)
     ctl = res[1]
     if ctl == nil then return nil end
     return table.unpack(res, 1, res.n)
@@ -138,7 +145,7 @@ end
 -- Take the iterator's it results while the predicate p returns true.
 -- The predicate is called with the values of each iteration.
 -- Return a new iterator that applies the take while condition.
--- If it is nil, returns a partially-applied function with the predicate
+-- If "it" is nil, returns a partially-applied function with the predicate
 -- p set.
 function M.takewhile(p, it, inv, ctl)
   if it == nil then return M.partial(M.takewhile, p) end
@@ -147,7 +154,7 @@ function M.takewhile(p, it, inv, ctl)
   return function()
     if stop then return nil end
 
-    local res = table.pack(it(inv, ctl))
+    local res = step_iterator(it, inv, ctl)
     ctl = res[1]
     if ctl == nil then return nil end
 
@@ -160,7 +167,7 @@ end
 
 -- Skip the first n results of iterator it.
 -- Return a new iterator that skips those first n results.
--- If it is nil, returns a partially-applied function with the n
+-- If "it" is nil, returns a partially-applied function with the n
 -- value set.
 function M.skipn(n, it, inv, ctl)
   if it == nil then return M.partial(M.skipn, n) end
@@ -171,7 +178,7 @@ function M.skipn(n, it, inv, ctl)
       n = n - 1
       if ctl == nil then return nil end
     end
-    local res = table.pack(it(inv, ctl))
+    local res = step_iterator(it, inv, ctl)
     ctl = res[1]
     if ctl == nil then return nil end
     return table.unpack(res, 1, res.n)
@@ -181,7 +188,7 @@ end
 -- Skip the iterator's it results while the predicate p returns true.
 -- The predicate is called with the values of each iteration.
 -- Return a new iterator that applies the skip while condition.
--- If it is nil, returns a partially-applied function with the predicate
+-- If "it" is nil, returns a partially-applied function with the predicate
 -- p set.
 function M.skipwhile(p, it, inv, ctl)
   if it == nil then return M.partial(M.skipwhile, p) end
@@ -189,7 +196,7 @@ function M.skipwhile(p, it, inv, ctl)
   local skipping = true
   return function()
     while skipping do
-      local res = table.pack(it(inv, ctl))
+      local res = step_iterator(it, inv, ctl)
       ctl = res[1]
       if ctl == nil then return nil end
       if not p(table.unpack(res, 1, res.n)) then
@@ -198,7 +205,7 @@ function M.skipwhile(p, it, inv, ctl)
       end
     end
 
-    local res = table.pack(it(inv, ctl))
+    local res = step_iterator(it, inv, ctl)
     ctl = res[1]
     if ctl == nil then return nil end
     return table.unpack(res, 1, res.n)
@@ -210,14 +217,14 @@ end
 -- iteration that returned true and all its values.
 -- It returns false as the only value if the iteration is completed
 -- without p returning true.
--- If it is nil, returns a partially-applied function with the predicate
+-- If "it" is nil, returns a partially-applied function with the predicate
 -- p set.
 function M.any(p, it, inv, ctl)
   if it == nil then return M.partial(M.any, p) end
 
   local ix = 0
   while true do
-    local res = table.pack(it(inv, ctl))
+    local res = step_iterator(it, inv, ctl)
     ctl = res[1]
     if ctl == nil then return false end
     ix = ix + 1
@@ -233,14 +240,14 @@ end
 -- iteration that returned false and all its values.
 -- It returns true as the only value if the iteration is completed without
 -- p returning false.
--- If it is nil, returns a partially-applied function with the predicate
+-- If "it" is nil, returns a partially-applied function with the predicate
 -- p set.
 function M.all(p, it, inv, ctl)
   if it == nil then return M.partial(M.all, p) end
 
   local ix = 0
   while true do
-    local res = table.pack(it(inv, ctl))
+    local res = step_iterator(it, inv, ctl)
     ctl = res[1]
     if ctl == nil then return true end
     ix = ix + 1
@@ -271,7 +278,7 @@ function M.concat(...)
       if t == nil then return nil end
 
       local it, inv, ctl = t[1], t[2], t[3]
-      local res = table.pack(it(inv, ctl))
+      local res = step_iterator(it, inv, ctl)
       t[3] = res[1]
 
       if t[3] == nil then
@@ -281,6 +288,126 @@ function M.concat(...)
       end
     end
   end
+end
+
+-- Zip returns an iterator that returns the first value of all iterators at
+-- each iteration step. All iterators are iterated together at the same time,
+-- and iteration ends when the first iterator ends. If other iterators end
+-- earlier, the nil value is returned for this iterator.
+--
+-- The arguments must be provided as a list of tables, each table an array
+-- containing the iterator tuple (see documentation for concat for more
+-- details).
+function M.zip(...)
+  local its = table.pack(...)
+
+  return function()
+		local res = {n=0}
+		for i, it in ipairs(its) do
+			local step = {}
+
+			if not it.done then
+				step = step_iterator(it[1], it[2], it[3])
+				it[3] = step[1]
+				if it[3] == nil then
+					if i == 1 then return nil end
+					it.done = true
+				end
+			end
+
+			res.n = res.n + 1
+			res[res.n] = step[1]
+		end
+		return table.unpack(res, 1, res.n)
+  end
+end
+
+-- Unzip takes a single iterator and returns a new iterator that produces a
+-- single value on each iteration. The original iterator advances only when
+-- all its returned values for a given step have been returned as single-value
+-- iteration steps. Note that any nil value in the values returned by the
+-- original iterator will stop the new iterator early, as nil are possible
+-- only when not the first return value in a Lua iterator (otherwise they
+-- indicate the end of iteration).
+function M.unzip(it, inv, ctl)
+	local remain = {n=0}
+	return function()
+		while true do
+			if remain.n > 0 then
+				remain.n = remain.n - 1
+				return table.remove(remain, 1)
+			end
+
+			local res = step_iterator(it, inv, ctl)
+			ctl = res[1]
+			if ctl == nil then return nil end
+			remain = res
+		end
+	end
+end
+
+-- Select takes a single iterator and returns a new iterator that produces
+-- the value(s) of the original iterator specified by n, which can be:
+--     * A number, indicating the 1-based index of the value to select
+--     * An array, indicating the 1-based indices of the values to select,
+--       returned in the array's order.
+--     * A function that will receive the original iterator's values and
+--       return its returned values instead (same as map).
+--
+-- It is a specialized form of map. If "it" is nil, returns a partially-applied
+-- function with "n" set.
+function M.select(n, it, inv, ctl)
+	local typ = type(n)
+	if typ == 'function' then
+		return M.map(n, it, inv, ctl)
+	end
+	if typ == 'number' then
+		n = {n}
+	end
+	return M.map(function(...)
+		local res = {}
+		for _, ix in ipairs(n) do
+			table.insert(res, (select(ix, ...)))
+		end
+		return table.unpack(res, 1, #n)
+	end, it, inv, ctl)
+end
+
+-- Collects the first value of the iterator into an array, appending to t on
+-- each iteration. If t is nil, a new table is created. If "it" is nil, returns
+-- a partially-applied function with "t" set. This function consumes the
+-- iterator and returns t, it is a special case of reduce.
+--
+-- To collect multiple values from the iterator in an array, pipe from pack,
+-- select or map.
+function M.collectarray(t, it, inv, ctl)
+	return M.reduce(function(cumul, v)
+		table.insert(cumul, v)
+		return cumul
+	end, t or {}, it, inv, ctl)
+end
+
+-- Collects the first two values of the iterator in a table, the first value
+-- being used as the key and the second as the value. If t is nil, a new table
+-- is created. If "it" is nil, returns a partially-applied function with "t"
+-- set. This function consumes the iterator and returns t, it is a special case
+-- of reduce.
+--
+-- To rearrange order of the iterator's values, see select.
+function M.collectkv(t, it, inv, ctl)
+	return M.reduce(function(cumul, k, v)
+		cumul[k] = v
+		return cumul
+	end, t or {}, it, inv, ctl)
+end
+
+-- Packs takes an iterator and returns a new iterator that packs all values
+-- from the original iterator into an array and returns that array as iteration
+-- value instead. It is a specialized form of map.
+function M.pack(it, inv, ctl)
+	return M.map(function(...)
+		return table.pack(...)
+	end, it, inv, ctl)
 end
 
 -- Callmethod calls the method m on table t, passing the args
